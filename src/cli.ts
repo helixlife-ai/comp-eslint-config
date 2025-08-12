@@ -11,7 +11,6 @@ interface CliOptions {
   tailwindCSS?: boolean
   typeChecked?: boolean | 'essential'
   strict?: boolean
-  file?: 'ts' | 'js'
   yes?: boolean
   force?: boolean
   install?: boolean
@@ -87,20 +86,7 @@ function parseArgs(argv: string[]): CliOptions {
               options.strict = false
               break
             }
-            case '--js': {
-              options.file = 'js'
-              break
-            }
-            case '--ts': {
-              options.file = 'ts'
-              break
-            }
-            default: { if (arg.startsWith('--file=')) {
-              const v = arg.split('=')[1]
-              if (v === 'js' || v === 'ts')
-                options.file = v
-            }
-            else {
+            default: {
               switch (arg) {
                 case '--yes':
                 case '-y': {
@@ -119,7 +105,6 @@ function parseArgs(argv: string[]): CliOptions {
                 break
                 }
               }
-            }
             }
           }
         }
@@ -229,7 +214,7 @@ function generateConfigContent(options: CliOptions): string {
 }
 
 function ensureConfigFile(cwd: string, options: CliOptions) {
-  const ext = options.file ?? 'js'
+  const ext = 'mjs'
   const filename = `eslint.config.${ext}`
   const full = join(cwd, filename)
   if (existsSync(full) && !options.force) {
@@ -242,7 +227,7 @@ function ensureConfigFile(cwd: string, options: CliOptions) {
 }
 
 function printHelp() {
-  const help = `\nUsage: npx @helix/eslint-config [options]\n\nOptions:\n  --prettier              Enable Prettier integration\n  --react[=next|vite|remix|expo|true|false]  Configure React framework or toggle\n  --tailwind / --no-tailwind  Toggle Tailwind CSS rules\n  --typechecked[=true|false|essential]  Enable TS type-aware rules\n  --strict                Enable stricter presets\n  --ts / --js / --file=ts|js  Choose config file extension (default: js)\n  --force, -f            Overwrite existing eslint.config.*\n  --no-install           Do not install dependencies\n  --yes, -y              Assume yes for non-interactive flow\n  -h, --help             Show this help\n`
+  const help = `\nUsage: npx @helix/eslint-config [options]\n\nOptions:\n  --prettier              Enable Prettier integration\n  --react[=next|vite|remix|expo|true|false]  Configure React framework or toggle\n  --tailwind / --no-tailwind  Toggle Tailwind CSS rules\n  --typechecked[=true|false|essential]  Enable TS type-aware rules\n  --strict                Enable stricter presets\n  --force, -f            Overwrite existing eslint.config.*\n  --no-install           Do not install dependencies\n  --yes, -y              Assume yes for non-interactive flow\n  -h, --help             Show this help\n`
   console.log(help)
 }
 
@@ -314,11 +299,6 @@ async function promptOptions(base: CliOptions): Promise<CliOptions> {
 
     if (options.strict === undefined)
       options.strict = await promptYesNo(rl, 'Enable strict preset?', false)
-
-    if (options.file === undefined) {
-      const ext = await promptSelect(rl, 'Config file extension', ['js', 'ts'], 0)
-      options.file = ext as 'js' | 'ts'
-    }
 
     return options
   }
