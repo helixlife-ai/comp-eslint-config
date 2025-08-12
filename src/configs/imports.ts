@@ -3,7 +3,13 @@ import pluginAntfu from 'eslint-plugin-antfu'
 import * as pluginImport from 'eslint-plugin-import-x'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
 
-export function importConfig(): Linter.Config {
+import type { Options } from '../option'
+
+export function importConfig({ prettier }: Required<Options>): Linter.Config {
+  if (prettier) {
+    return {}
+  }
+
   return {
     name: 'extent/import',
     plugins: {

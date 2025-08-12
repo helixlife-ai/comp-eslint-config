@@ -26,7 +26,7 @@ export async function defineESLintConfig(options?: Options, ...args: ConfigArray
     ...javascriptConfigs(finalOptions),
     ...unicornConfigs(finalOptions),
     ...typeScriptConfigs(finalOptions),
-    importConfig(),
+    importConfig(finalOptions),
     unusedConfig(),
     regexConfig(),
     commandConfig(),
