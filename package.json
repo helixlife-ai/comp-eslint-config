@@ -1,7 +1,7 @@
 {
   "name": "@helix/eslint-config",
   "type": "module",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "packageManager": "pnpm@10.14.0",
   "description": "ESLint config for Bobby",
   "author": "Bobby <bobbylin23@163.com>",
