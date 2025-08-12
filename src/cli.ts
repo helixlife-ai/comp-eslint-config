@@ -3,6 +3,7 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { createInterface } from 'node:readline/promises'
 
 interface CliOptions {
   prettier?: boolean
@@ -228,7 +229,7 @@ function generateConfigContent(options: CliOptions): string {
 }
 
 function ensureConfigFile(cwd: string, options: CliOptions) {
-  const ext = options.file ?? 'ts'
+  const ext = options.file ?? 'js'
   const filename = `eslint.config.${ext}`
   const full = join(cwd, filename)
   if (existsSync(full) && !options.force) {
@@ -241,18 +242,100 @@ function ensureConfigFile(cwd: string, options: CliOptions) {
 }
 
 function printHelp() {
-  const help = `\nUsage: npx @helix/eslint-config [options]\n\nOptions:\n  --prettier              Enable Prettier integration\n  --react[=next|vite|remix|expo|true|false]  Configure React framework or toggle\n  --tailwind / --no-tailwind  Toggle Tailwind CSS rules\n  --typechecked[=true|false|essential]  Enable TS type-aware rules\n  --strict                Enable stricter presets\n  --ts / --js / --file=ts|js  Choose config file extension (default: ts)\n  --force, -f            Overwrite existing eslint.config.*\n  --no-install           Do not install dependencies\n  --yes, -y              Assume yes for non-interactive flow\n  -h, --help             Show this help\n`
+  const help = `\nUsage: npx @helix/eslint-config [options]\n\nOptions:\n  --prettier              Enable Prettier integration\n  --react[=next|vite|remix|expo|true|false]  Configure React framework or toggle\n  --tailwind / --no-tailwind  Toggle Tailwind CSS rules\n  --typechecked[=true|false|essential]  Enable TS type-aware rules\n  --strict                Enable stricter presets\n  --ts / --js / --file=ts|js  Choose config file extension (default: js)\n  --force, -f            Overwrite existing eslint.config.*\n  --no-install           Do not install dependencies\n  --yes, -y              Assume yes for non-interactive flow\n  -h, --help             Show this help\n`
   console.log(help)
 }
 
-function main() {
+async function promptYesNo(rl: ReturnType<typeof createInterface>, question: string, def: boolean): Promise<boolean> {
+  const suffix = def ? 'Y/n' : 'y/N'
+  while (true) {
+    const ans = (await rl.question(`${question} (${suffix}): `)).trim().toLowerCase()
+    if (!ans)
+      return def
+    if (ans === 'y' || ans === 'yes')
+      return true
+    if (ans === 'n' || ans === 'no')
+      return false
+    console.log('Please answer y or n.')
+  }
+}
+
+async function promptSelect<T extends string>(
+  rl: ReturnType<typeof createInterface>,
+  question: string,
+  choices: T[],
+  defIndex = 0,
+): Promise<T> {
+  console.log(`\n${question}`)
+  choices.forEach((c, i) => {
+    const mark = i === defIndex ? '*' : ' '
+    console.log(`  ${i + 1}. [${mark}] ${c}`)
+  })
+  while (true) {
+    const ans = (await rl.question(`Select 1-${choices.length} (default ${defIndex + 1}): `)).trim()
+    if (!ans)
+      return choices[defIndex]
+    const n = Number.parseInt(ans)
+    if (Number.isInteger(n) && n >= 1 && n <= choices.length)
+      return choices[n - 1]
+    console.log('Invalid selection.')
+  }
+}
+
+async function promptOptions(base: CliOptions): Promise<CliOptions> {
+  if (base.yes)
+    return base
+
+  const rl = createInterface({ input: process.stdin, output: process.stdout })
+  try {
+    const options: CliOptions = { ...base }
+
+    if (options.prettier === undefined)
+      options.prettier = await promptYesNo(rl, 'Enable Prettier integration?', true)
+
+    if (options.react === undefined) {
+      const useReact = await promptYesNo(rl, 'Use React?', false)
+      if (useReact) {
+        const framework = await promptSelect(rl, 'Select React framework', ['generic', 'next', 'vite', 'remix', 'expo'], 0)
+        options.react = framework === 'generic' ? true : framework
+      }
+      else {
+        options.react = false
+      }
+    }
+
+    if (options.tailwindCSS === undefined)
+      options.tailwindCSS = await promptYesNo(rl, 'Enable Tailwind CSS rules?', false)
+
+    if (options.typeChecked === undefined) {
+      const level = await promptSelect(rl, 'Type-checked rules level', ['off', 'essential', 'on'], 0)
+      options.typeChecked = level === 'off' ? false : (level === 'essential' ? 'essential' : true)
+    }
+
+    if (options.strict === undefined)
+      options.strict = await promptYesNo(rl, 'Enable strict preset?', false)
+
+    if (options.file === undefined) {
+      const ext = await promptSelect(rl, 'Config file extension', ['js', 'ts'], 0)
+      options.file = ext as 'js' | 'ts'
+    }
+
+    return options
+  }
+  finally {
+    rl.close()
+  }
+}
+
+async function main() {
   const args = process.argv.slice(2)
   if (args.includes('-h') || args.includes('--help')) {
     printHelp()
     return
   }
   const cwd = resolve(process.cwd())
-  const options = parseArgs(args)
+  const optionsFromArgs = parseArgs(args)
+  const options = await promptOptions(optionsFromArgs)
 
   const pm = detectPackageManager(cwd)
   if (options.install !== false)
@@ -267,4 +350,7 @@ function main() {
   console.log('  - pnpm lint:fix    # or npm run lint:fix / yarn lint:fix / bun run lint:fix')
 }
 
-main()
+main().catch((err) => {
+  console.error(err)
+  process.exit(1)
+})
