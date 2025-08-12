@@ -1,5 +1,5 @@
 {
-  "name": "@bobby/eslint-config",
+  "name": "@helix/eslint-config",
   "type": "module",
   "version": "0.0.1",
   "packageManager": "pnpm@10.14.0",
