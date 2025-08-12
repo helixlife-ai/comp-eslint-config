@@ -42,7 +42,6 @@ export async function config(
     ...(
       await Promise.all(
         configs.map(async (config) => {
-          console.log('config', config)
           if (typeof config === 'function') {
             const resolved = await config()
 
