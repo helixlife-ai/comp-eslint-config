@@ -13,7 +13,6 @@ export function prettierConfig({ prettier }: Required<Options>): Linter.Config {
       prettier: pluginPrettier as unknown as ESLint.Plugin,
     },
     rules: {
-      ...pluginPrettier.rules,
       'prettier/prettier': 'warn',
     },
   }

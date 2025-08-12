@@ -3,6 +3,13 @@ import { defineESLintConfig } from './src/factory'
 
 export default defineESLintConfig({
   react: 'next',
-  prettier: true,
-  tailwindCSS: true
+  prettier: false,
+  formatting: {
+    semi: false,
+  },
+}, {
+  rules: {
+    'unicorn/prefer-single-call': 'off',
+    'no-console': 'off',
+  },
 })
